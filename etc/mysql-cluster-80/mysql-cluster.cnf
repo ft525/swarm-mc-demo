@@ -1,0 +1,46 @@
+# MySQL Cluster 8.0 - Management Node
+#
+#
+# 設定參考
+#	https://dev.mysql.com/doc/refman/8.0/en/mysql-cluster-configuration-overview.html
+
+
+
+
+[ndbd default]
+# Data node 的數量
+NoOfReplicas=2
+
+# 每個 data node 分配儲存資料的記憶體大小
+DataMemory=80M
+
+# 分配儲存索引的記憶體大小 (Deprecated: 從 NDB 7.6.2 開始，改從 DataMemory 動態分配一部份給 IndexMemory 使用)
+#IndexMemory=18M
+
+
+[ndb_mgmd]
+# Node 編號
+NodeId=1
+
+# Host 名稱或 IP
+hostname=mc80_mgm_1
+
+# 資料存放目錄
+datadir=/var/lib/mysql
+
+
+[ndbd]
+NodeId=2
+hostname=mc80_ndb_1
+datadir=/var/lib/mysql
+
+
+[ndbd]
+NodeId=3
+hostname=mc80_ndb_2
+datadir=/var/lib/mysql
+
+
+[mysqld]
+NodeId=4
+hostname=mc80_api_1

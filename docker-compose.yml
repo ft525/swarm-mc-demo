@@ -1,0 +1,159 @@
+version: '3'
+
+
+services:
+    # Nginx
+    nginx:
+        image: nginx:1.19-alpine
+        volumes:
+            # 基礎設定檔
+            - ./etc/nginx119/nginx.conf:/etc/nginx/nginx.conf
+            # 客製設定檔
+            - ./etc/nginx119/conf.d:/etc/nginx/conf.d
+
+            # 預設 HTTPS 憑證
+            - ./etc/nginx119/localhost.crt:/usr/local/nginx/conf/localhost.crt
+            - ./etc/nginx119/localhost.key:/usr/local/nginx/conf/localhost.key
+
+            # DocumentRoot
+            - ./volumes/htdocs:/var/htdocs
+
+            # Log
+            - ./volumes/logs/nginx119:/var/log/nginx
+        ports:
+            # Web
+            - '9080:80'
+            - '9443:443'
+        networks:
+            - cluster-demo-net
+        deploy:
+            placement:
+                constraints:
+                    - "node.labels.type==ap"
+            restart_policy:
+                condition: on-failure
+
+    # MySQL Cluster 8.0 (MGM)
+    mc80_mgm_1:
+        image: mysql/mysql-cluster:8.0
+        # 使用自訂的設定 (参考: /entrypoint.sh)
+        entrypoint: ["ndb_mgmd", "--config-file=/usr/mysql-cluster/mysql-cluster.cnf", "--nodaemon"]
+        user: '${PROJECT_UID}:${PROJECT_GID}'
+        volumes:
+            # 基礎設定檔
+            - ./etc/mysql-cluster-80/my.cnf:/etc/my.cnf
+            # Cluster 設定檔
+            - ./etc/mysql-cluster-80/mysql-cluster.cnf:/usr/mysql-cluster/mysql-cluster.cnf
+            # DB 檔案位置
+            - ./volumes/mysql-cluster-80:/var/lib/mysql
+            # Log
+            - ./volumes/logs/mysql-cluster-80/mgm_1:/var/log/mysql
+        networks:
+            - cluster-demo-net
+        deploy:
+            placement:
+                constraints:
+                    - "node.labels.type==db"
+                    - "node.labels.db_role==mgm_1"
+            restart_policy:
+                condition: on-failure
+
+    # MySQL Cluster 8.0 (NDB)
+    mc80_ndb_1:
+        image: mysql/mysql-cluster:8.0
+        command: ndbd
+        user: '${PROJECT_UID}:${PROJECT_GID}'
+        volumes:
+            # 基礎設定檔
+            - ./etc/mysql-cluster-80/my.cnf:/etc/my.cnf
+            # DB 檔案位置
+            - ./volumes/mysql-cluster-80:/var/lib/mysql
+            # Log
+            - ./volumes/logs/mysql-cluster-80/ndb_1:/var/log/mysql
+        networks:
+            - cluster-demo-net
+        deploy:
+            placement:
+                constraints:
+                    - "node.labels.type==db"
+                    - "node.labels.db_role==ndb_1"
+            restart_policy:
+                condition: on-failure
+
+    mc80_ndb_2:
+        image: mysql/mysql-cluster:8.0
+        command: ndbd
+        user: '${PROJECT_UID}:${PROJECT_GID}'
+        volumes:
+            # 基礎設定檔
+            - ./etc/mysql-cluster-80/my.cnf:/etc/my.cnf
+            # DB 檔案位置
+            - ./volumes/mysql-cluster-80:/var/lib/mysql
+            # Log
+            - ./volumes/logs/mysql-cluster-80/ndb_2:/var/log/mysql
+        networks:
+            - cluster-demo-net
+        deploy:
+            placement:
+                constraints:
+                    - "node.labels.type==db"
+                    - "node.labels.db_role==ndb_2"
+            restart_policy:
+                condition: on-failure
+
+    # MySQL Cluster 8.0 (API)
+    mc80_api_1:
+        image: mysql/mysql-cluster:8.0
+        command: mysqld
+        user: '${PROJECT_UID}:${PROJECT_GID}'
+        volumes:
+            # 基礎設定檔
+            - ./etc/mysql-cluster-80/my.cnf:/etc/my.cnf
+            # DB 檔案位置 (需要保留 api 的資料，否則每次重啟都會執行 db 初始化)
+            - ./volumes/mysql-cluster-80/api_1:/var/lib/mysql
+            # Log (目前 Cluster 的 log 都會寫在 API node 這，之後可以考慮把其它 log dir unmount)
+            - ./volumes/logs/mysql-cluster-80/api_1:/var/log/mysql
+        networks:
+            - cluster-demo-net
+        env_file:
+            - ./env/mysq-cluster-l80
+        deploy:
+            placement:
+                constraints:
+                    - "node.labels.type==db"
+                    - "node.labels.db_role==api_1"
+            restart_policy:
+                condition: on-failure
+
+    # PHP
+    php73:
+        image: php:7.3-fpm-alpine3.12
+        volumes:
+            # 主設定檔
+            - ./etc/php73/php.ini-development:/usr/local/etc/php/php.ini
+            # 客製設定檔
+            - ./etc/php73/conf.d/custom.ini:/usr/local/etc/php/conf.d/custom.ini
+            # PHP-FPM 設定檔
+            - ./etc/php73-fpm.d/www.conf:/usr/local/etc/php-fpm.d/www.conf
+
+            # Log
+            - ./volumes/logs/php73:/var/log/php-fpm
+
+            # DocumentRoot
+            - ./volumes/htdocs:/var/htdocs
+        networks:
+            cluster-demo-net:
+                aliases:
+                    # hostname 別名 (用來指定 nginx 預設的 PHP-FPM 使用版本)
+                    - php-main
+        deploy:
+            placement:
+                constraints:
+                    - "node.labels.type==ap"
+            restart_policy:
+                condition: on-failure
+
+
+networks:
+    cluster-demo-net:
+        driver: overlay

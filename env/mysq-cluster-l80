@@ -1,0 +1,30 @@
+# MySQL Cluster 8.0
+#
+# 環境變數參考:
+#	https://github.com/mysql/mysql-docker/tree/mysql-cluster#docker-environment-variables
+
+
+# root 密碼 (Required)
+MYSQL_ROOT_PASSWORD=root
+
+# 允許 root 可以登入的 host，預設是 'root'@'localhost'，可以使用 wildcard (172.*.*.*) 或 % (也可以填會連到 API node 的 service IP)
+MYSQL_ROOT_HOST=%
+
+# 若為 true，MySQL Server's error log 會輸出到 stderr
+MYSQL_LOG_CONSOLE=
+
+# 建立容器後自動創建的 DB (Optional)
+#MYSQL_DATABASE=
+
+# 建立使用者帳號 & 密碼 (This user will be granted superuser permissions) (Optional)
+#MYSQL_USER=
+#MYSQL_PASSWORD=
+
+# Root 允許使用空密碼 (Optional)
+#MYSQL_ALLOW_EMPTY_PASSWORD=yes
+
+# 產生初始亂數密碼 (使用 pwgen 產生，密碼會顯示在 stdout "GENERATED ROOT PASSWORD: xxx") (Optional)
+#MYSQL_RANDOM_ROOT_PASSWORD=yes
+
+# 建立一次性密碼 (root)，在第一次登入後會強制更換新密碼 (MySQL 5.6+ only)
+MYSQL_ONETIME_PASSWORD=
